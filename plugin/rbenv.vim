@@ -2,18 +2,11 @@
 " Maintainer:   Tim Pope <http://tpo.pe/>
 " Version:      1.1
 
-if exists("g:loaded_rbenv") || v:version < 700 || &cp || !executable('rbenv')
+if exists("g:loaded_rbenv") || v:version < 700 || &cp
   finish
 endif
 let g:loaded_rbenv = 1
 
-command! -bar -nargs=* -complete=custom,s:Complete Rbenv
-      \ if get([<f-args>], 0, '') ==# 'shell' |
-      \   exe s:shell(<f-args>) |
-      \ else |
-      \   exe '!rbenv ' . <q-args> |
-      \   call extend(g:ruby_version_paths, s:ruby_version_paths(), 'keep') |
-      \ endif
 
 function! s:shell(_, ...)
   if !a:0
@@ -25,7 +18,7 @@ function! s:shell(_, ...)
     return ''
   elseif a:1 ==# '--unset'
     let $RBENV_VERSION = ''
-  elseif !isdirectory(s:rbenv_root() . '/versions/' . a:1)
+  elseif !isdirectory(s:rbenv_root() . '/' . a:1)
     echo 'rbenv.vim: version `' . a:1 . "' not installed"
   else
     let $RBENV_VERSION = a:1
@@ -46,12 +39,12 @@ function! s:Complete(A, L, P)
 endfunction
 
 function! s:rbenv_root()
-  return empty($RBENV_ROOT) ? expand('~/.rbenv') : $RBENV_ROOT
+  return empty($RBENV_ROOT) ? expand('~/.asdf/installs/ruby') : $RBENV_ROOT
 endfunction
 
 function! s:ruby_version_paths() abort
   let dict = {}
-  let root = s:rbenv_root() . '/versions/'
+  let root = s:rbenv_root() . '/'
   for entry in split(glob(root.'*'))
     let ver = entry[strlen(root) : -1]
     let paths = ver =~# '^1.[0-8]' ? ['.'] : []
@@ -87,7 +80,10 @@ function! s:set_paths() abort
   elseif filereadable(s:rbenv_root() . '/version')
     let ver = get(readfile(s:rbenv_root() . '/version', '', 1), 0, '')
   else
-    return
+    let ver = system('asdf current ruby | cut -d" " -f1')[:-2]
+    if empty(ver)
+      return
+    endif
   endif
   if has_key(g:ruby_version_paths, ver)
     let g:ruby_default_path = g:ruby_version_paths[ver]
